@@ -208,6 +208,7 @@
             const status = document.getElementById('status');
             status.textContent = message;
             status.className = type;
+            status.style.display = 'block';
             setTimeout(() => status.style.display = 'none', 5000);
         }
 
