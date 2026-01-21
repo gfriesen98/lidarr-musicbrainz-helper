@@ -118,6 +118,7 @@
         // EDIT THESE:
         const LIDARR_URL = 'http://';                           // Lidarr ip address or hostname + port. Such as: http://10.0.0.1:8686, https://hostname/lidarr, wherever lidarr is reachable
         const LIDARR_API_KEY = 'COPY API KEY HERE';             // Lidarr API key. Find your Lidarr API key under Settings -> General -> Security
+        const LIDARR_ROOT_FOLDER_PATH = '/music';               // Lidarr Root Folder Path. It should be what ever you have set up for this. Such as: /music, D:\My Music, etc
 
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchArtists();
@@ -166,6 +167,9 @@
                     <button class="add-btn" onclick="addToLidarr('${artist.id}', '${escapeHtml(artist.name)}')">
                         Add to Lidarr
                     </button>
+                    <button class="copy-btn" onclick="copyLidarrId('${artist.id}')">
+                        Copy LIDARR ID
+                    </button>
                 </div>
             `).join('');
         }
@@ -209,6 +213,15 @@
 
         function escapeHtml(text) {
             return text.replace(/'/g, "\\'");
+        }
+
+        function copyLidarrId(mbId) {
+            const lidarrId = `lidarr:${mbId}`;
+            navigator.clipboard.writeText(lidarrId).then(() => {
+                showStatus(`Copied to clipboard: ${lidarrId}`, 'success');
+            }).catch(err => {
+                showStatus('Failed to copy to clipboard: ' + err.message, 'error');
+            });
         }
     </script>
 </body>
