@@ -8,4 +8,5 @@ A crappy html page to help add new artists to your Lidarr instance
   - You need to edit `LIDARR_URL‎` and `LIDARR_API_KEY`
   - `LIDARR_URL` is the http/s address to your lidarr instance. It can be your ip address + port, wherever it is accessed in your browser
   - `LIDARR_API_KEY` is found in Lidarr Settings -> General -> Security
+  - `LIDARR_ROOT_FOLDER_PATH` is the path you have configured for your Lidarr Root Folder
 4. Now you can open `index.html` in your browser to search musicbrainz artists and add whatever is returned to Lidarr. You can add it to your stack. Put it under nginx, docker, whatever you want
