@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Artist to Lidarr</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .artist-card {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .artist-info h3 {
+            margin: 0 0 5px 0;
+        }
+
+        .artist-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .add-btn {
+            background: #28a745;
+            padding: 8px 16px;
+        }
+
+        .add-btn:hover {
+            background: #218838;
+        }
+
+        #status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Add Artist to Lidarr</h1>
+
+    <div id="status"></div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search for an artist...">
+        <button onclick="searchArtists()" id="searchBtn">Search</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // EDIT THESE:
+        const LIDARR_URL = 'http://';                           // Lidarr ip address or hostname + port. Such as: http://10.0.0.1:8686, https://hostname/lidarr, wherever lidarr is reachable
+        const LIDARR_API_KEY = 'COPY API KEY HERE';             // Lidarr API key. Find your Lidarr API key under Settings -> General -> Security
+
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchArtists();
+        });
+
+        async function searchArtists() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            const btn = document.getElementById('searchBtn');
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+
+            try {
+                const url = `https://musicbrainz.org/ws/2/artist/?query=artist:${encodeURIComponent(query)}&fmt=json&limit=10`;
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': 'LidarrAdder/1.0' }
+                });
+                const data = await response.json();
+                displayResults(data.artists || []);
+            } catch (error) {
+                showStatus('Search failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Search';
+            }
+        }
+
+        function displayResults(artists) {
+            const results = document.getElementById('results');
+            if (artists.length === 0) {
+                results.innerHTML = '<p>No artists found</p>';
+                return;
+            }
+
+            results.innerHTML = artists.map(artist => `
+                <div class="artist-card">
+                    <div class="artist-info">
+                        <h3>${artist.name}</h3>
+                        <p>
+                            ${artist.disambiguation ? `(${artist.disambiguation}) ` : ''}
+                            ${artist.country ? `${artist.country} • ` : ''}
+                            ${artist['life-span']?.begin || ''}
+                        </p>
+                    </div>
+                    <button class="add-btn" onclick="addToLidarr('${artist.id}', '${escapeHtml(artist.name)}')">
+                        Add to Lidarr
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function addToLidarr(mbId, artistName) {
+            try {
+                const response = await fetch(`${LIDARR_URL}/api/v1/artist`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Api-Key': LIDARR_API_KEY
+                    },
+                    body: JSON.stringify({
+                        foreignArtistId: mbId,
+                        artistName: artistName,
+                        qualityProfileId: 1,
+                        metadataProfileId: 1,
+                        rootFolderPath: '/music',
+                        monitored: true,
+                        addOptions: { searchForMissingAlbums: true }
+                    })
+                });
+
+                if (response.ok) {
+                    showStatus(`Successfully added ${artistName} to Lidarr!`, 'success');
+                } else {
+                    const error = await response.text();
+                    showStatus(`Failed to add artist: ${error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+            setTimeout(() => status.style.display = 'none', 5000);
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/'/g, "\\'");
+        }
+    </script>
+</body>
+
+</html>
